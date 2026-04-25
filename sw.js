@@ -2,8 +2,8 @@ self.addEventListener('install', (e) => {
     e.waitUntil(
         caches.open('portfolio-v1').then((cache) => {
             return cache.addAll([
-                'asset/asset Management.html',
-                'Investment /Investment Management.html.html',
+                'assets/index.html',
+                'stocks/index.html',
                 'manifest.json'
             ]);
         })
