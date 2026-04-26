@@ -616,8 +616,8 @@
                         description: "Portfolio Master",
                         public: false,
                         files: {
-                            "app_assets_data.json": { content: JSON.stringify(content, null, 2) },
-                            "app_shared_summary.json": { content: localStorage.getItem('stock_family_summary') || "{}" }
+                            "family_asset_data.json": { content: JSON.stringify(content, null, 2) },
+                            "family_stock_summary.json": { content: localStorage.getItem('stock_family_summary') || "{}" }
                         }
                     };
 
@@ -670,8 +670,8 @@
                         if (res.ok) {
                             const data = await res.json();
 
-                            if (data.files['app_assets_data.json']) {
-                                const parsed = JSON.parse(data.files['app_assets_data.json'].content);
+                            if (data.files['family_asset_data.json']) {
+                                const parsed = JSON.parse(data.files['family_asset_data.json'].content);
                                 const proceed = silent ? true : confirm(`發現雲端備份 (${parsed.updatedAt})\n是否要覆蓋本地資料？`);
                                 if (proceed) {
                                     this.stocks = parsed.stocks || [];
@@ -685,8 +685,8 @@
                                 }
                             }
 
-                            if (data.files['app_shared_summary.json']) {
-                                localStorage.setItem('stock_family_summary', data.files['app_shared_summary.json'].content);
+                            if (data.files['family_stock_summary.json']) {
+                                localStorage.setItem('stock_family_summary', data.files['family_stock_summary.json'].content);
                                 this.syncWithFamilyStockBook();
                             }
                         }
