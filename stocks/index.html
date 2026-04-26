@@ -760,8 +760,8 @@
 
             const summaryData = localStorage.getItem('stock_family_summary');
             const files = {
-                'family_stock_data.json': { content: JSON.stringify(state.transactions) },
-                'family_stock_summary.json': { content: summaryData }
+                'app_stocks_data.json': { content: JSON.stringify(state.transactions) },
+                'app_shared_summary.json': { content: summaryData }
             };
 
             try {
@@ -779,7 +779,7 @@
                         'Content-Type': 'application/json'
                     },
                     body: JSON.stringify({
-                        description: "Family Stock Book Backup",
+                        description: "Portfolio Master",
                         public: false,
                         files
                     })
@@ -821,8 +821,8 @@
                 });
                 if (res.ok) {
                     const data = await res.json();
-                    if (data.files['family_stock_data.json']) {
-                        state.transactions = JSON.parse(data.files['family_stock_data.json'].content);
+                    if (data.files['app_stocks_data.json']) {
+                        state.transactions = JSON.parse(data.files['app_stocks_data.json'].content);
                         render();
                         statusEl.innerText = '下載成功！';
                     }

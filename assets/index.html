@@ -389,11 +389,13 @@
                                     class="w-full bg-slate-100 border-0 rounded-xl px-4 py-3 text-sm font-bold outline-none focus:ring-2 ring-indigo-500 transition-all"
                                     placeholder="直接貼上 Gist 網址、Script 標籤或 ID...">
                             </div>
-                            <div class="flex items-center gap-4 pt-4">
+                            <div class="flex flex-col sm:flex-row items-center gap-4 pt-4">
                                 <button @click="saveGithubSettings"
-                                    class="flex-1 bg-slate-800 text-white py-3 rounded-xl text-xs font-black hover:bg-slate-700 transition-all">儲存設定</button>
+                                    class="w-full sm:flex-1 bg-slate-800 text-white py-3 rounded-xl text-xs font-black hover:bg-slate-700 transition-all">儲存設定</button>
                                 <button @click="uploadToGist()"
-                                    class="flex-1 bg-indigo-600 text-white py-3 rounded-xl text-xs font-black shadow-lg shadow-indigo-500/20 hover:scale-105 transition-transform">手動上傳備份</button>
+                                    class="w-full sm:flex-1 bg-indigo-600 text-white py-3 rounded-xl text-xs font-black shadow-lg shadow-indigo-500/20 hover:scale-105 transition-transform">手動上傳備份</button>
+                                <button @click="downloadFromGist()"
+                                    class="w-full sm:flex-1 bg-emerald-600 text-white py-3 rounded-xl text-xs font-black shadow-lg shadow-emerald-500/20 hover:scale-105 transition-transform">手動下載同步</button>
                             </div>
                         </div>
 
@@ -614,9 +616,8 @@
                         description: "Portfolio Master",
                         public: false,
                         files: {
-                            "portfolio_data.json": { content: JSON.stringify(content, null, 2) },
-                            // 同時上傳 family_stock_summary.json 以供其他頁面讀取
-                            "family_stock_summary.json": { content: localStorage.getItem('stock_family_summary') || "{}" }
+                            "app_assets_data.json": { content: JSON.stringify(content, null, 2) },
+                            "app_shared_summary.json": { content: localStorage.getItem('stock_family_summary') || "{}" }
                         }
                     };
 
@@ -669,8 +670,8 @@
                         if (res.ok) {
                             const data = await res.json();
 
-                            if (data.files['portfolio_data.json']) {
-                                const parsed = JSON.parse(data.files['portfolio_data.json'].content);
+                            if (data.files['app_assets_data.json']) {
+                                const parsed = JSON.parse(data.files['app_assets_data.json'].content);
                                 const proceed = silent ? true : confirm(`發現雲端備份 (${parsed.updatedAt})\n是否要覆蓋本地資料？`);
                                 if (proceed) {
                                     this.stocks = parsed.stocks || [];
@@ -684,8 +685,8 @@
                                 }
                             }
 
-                            if (data.files['family_stock_summary.json']) {
-                                localStorage.setItem('stock_family_summary', data.files['family_stock_summary.json'].content);
+                            if (data.files['app_shared_summary.json']) {
+                                localStorage.setItem('stock_family_summary', data.files['app_shared_summary.json'].content);
                                 this.syncWithFamilyStockBook();
                             }
                         }
