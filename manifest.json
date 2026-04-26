@@ -2,7 +2,7 @@
   "name": "Portfolio Master",
   "short_name": "Portfolio",
   "description": "資產管理系統",
-  "start_url": "assets/index.html",
+  "start_url": "index.html",
   "display": "standalone",
   "background_color": "#e2e8f0",
   "theme_color": "#1e293b",

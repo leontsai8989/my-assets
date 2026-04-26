@@ -303,16 +303,23 @@
                             <span>雲端同步備份 (Gist)</span>
                         </h3>
                         <div class="space-y-3">
-                            <label class="text-[10px] font-bold text-slate-400 uppercase tracking-widest block mb-1">GitHub Token</label>
+                            <label
+                                class="text-[10px] font-bold text-slate-400 uppercase tracking-widest block mb-1">GitHub
+                                Token</label>
                             <div class="relative mb-2">
-                                <input type="password" id="gist-token" placeholder="ghp_..." class="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-sm outline-none focus:border-indigo-500 pr-10">
-                                <button type="button" onclick="toggleTokenVisibility('gist-token')" class="absolute right-2 top-1.5 text-slate-500 hover:text-slate-300">
+                                <input type="password" id="gist-token" placeholder="ghp_..."
+                                    class="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-sm outline-none focus:border-indigo-500 pr-10">
+                                <button type="button" onclick="toggleTokenVisibility('gist-token')"
+                                    class="absolute right-2 top-1.5 text-slate-500 hover:text-slate-300">
                                     <i class="fa-solid fa-eye"></i>
                                 </button>
                             </div>
-                            
-                            <label class="text-[10px] font-bold text-slate-400 uppercase tracking-widest block mb-1">Gist ID / 記事本網址 (可直接貼上網址、Script 標籤或 ID)</label>
-                            <input type="text" id="gist-id" placeholder="貼上網址、Script 標籤或 ID..." class="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-sm outline-none focus:border-indigo-500">
+
+                            <label
+                                class="text-[10px] font-bold text-slate-400 uppercase tracking-widest block mb-1">Gist
+                                ID / 記事本網址 (可直接貼上網址、Script 標籤或 ID)</label>
+                            <input type="text" id="gist-id" placeholder="貼上網址、Script 標籤或 ID..."
+                                class="w-full bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 text-sm outline-none focus:border-indigo-500">
 
                             <div class="grid grid-cols-2 gap-2">
                                 <button onclick="handleCloudUpload()"
@@ -821,8 +828,12 @@
                 });
                 if (res.ok) {
                     const data = await res.json();
-                    if (data.files['family_stock_data.json']) {
-                        state.transactions = JSON.parse(data.files['family_stock_data.json'].content);
+                    // 強大相容性：搜尋所有可能的股票檔名
+                    const stockFile = data.files['family_stock_data.json'] ||
+                        data.files['app_stocks_data.json'];
+
+                    if (stockFile) {
+                        state.transactions = JSON.parse(stockFile.content);
                         render();
                         statusEl.innerText = '下載成功！';
                     }
@@ -836,7 +847,7 @@
 
         // 初始化啟動
         loadData();
-        fetchStockPrice(); 
+        fetchStockPrice();
 
         function toggleTokenVisibility(id) {
             const el = document.getElementById(id);
