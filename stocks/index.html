@@ -772,6 +772,32 @@
             };
 
             try {
+                // 1. 先抓取目前雲端的完整資料 (避免覆蓋資產數據)
+                let currentGist = {};
+                if (gistId) {
+                    const getRes = await fetch(`https://api.github.com/gists/${gistId}`, {
+                        headers: { 'Authorization': `Bearer ${token}` }
+                    });
+                    if (getRes.ok) {
+                        const gistData = await getRes.json();
+                        if (gistData.files['family_master_data.json']) {
+                            currentGist = JSON.parse(gistData.files['family_master_data.json'].content);
+                        }
+                    }
+                }
+
+                // 2. 將股票資料併入主檔案
+                currentGist.stocks = state.transactions;
+                currentGist.stockSummary = JSON.parse(summaryData);
+
+                const payload = {
+                    description: "Family Master Portfolio",
+                    public: false,
+                    files: {
+                        "family_master_data.json": { content: JSON.stringify(currentGist, null, 2) }
+                    }
+                };
+
                 let url = 'https://api.github.com/gists';
                 let method = 'POST';
                 if (gistId) {
@@ -785,11 +811,7 @@
                         'Authorization': `Bearer ${token}`,
                         'Content-Type': 'application/json'
                     },
-                    body: JSON.stringify({
-                        description: "Portfolio Master",
-                        public: false,
-                        files
-                    })
+                    body: JSON.stringify(payload)
                 });
 
                 if (res.ok) {
@@ -828,14 +850,13 @@
                 });
                 if (res.ok) {
                     const data = await res.json();
-                    // 強大相容性：搜尋所有可能的股票檔名
-                    const stockFile = data.files['family_stock_data.json'] ||
-                        data.files['app_stocks_data.json'];
-
-                    if (stockFile) {
-                        state.transactions = JSON.parse(stockFile.content);
-                        render();
-                        statusEl.innerText = '下載成功！';
+                    if (data.files['family_master_data.json']) {
+                        const master = JSON.parse(data.files['family_master_data.json'].content);
+                        if (master.stocks) {
+                            state.transactions = master.stocks;
+                            render();
+                            statusEl.innerText = '下載成功！';
+                        }
                     }
                 } else {
                     alert('下載失敗');
