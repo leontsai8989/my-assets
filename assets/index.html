@@ -308,9 +308,15 @@
                                             </div>
                                         </td>
                                         <td class="px-6 py-4 text-right">
-                                            <input v-model.number="acc.balance" @change="saveData" type="number"
-                                                class="edit-input !text-right w-24 !text-sm !font-900 mono"
-                                                :class="acc.type === 'asset' ? 'text-emerald-600' : 'text-rose-500'">
+                                            <div class="flex items-center justify-end gap-2">
+                                                <select :value="acc.currency || 'TWD'" @input="acc.currency = $event.target.value; saveData()" class="text-xs font-bold bg-transparent outline-none text-slate-500">
+                                                    <option value="TWD">台幣</option>
+                                                    <option value="USD">美元</option>
+                                                </select>
+                                                <input v-model.number="acc.balance" @change="saveData" type="number"
+                                                    class="edit-input !text-right w-24 !text-sm !font-900 mono"
+                                                    :class="acc.type === 'asset' ? 'text-emerald-600' : 'text-rose-500'">
+                                            </div>
                                         </td>
                                         <td class="px-6 py-4 text-right">
                                             <button @click="removeAccount(idx)"
@@ -350,6 +356,11 @@
                             <div class="p-4 bg-slate-50 flex items-center gap-2">
                                 <input v-model="accountForm.name" placeholder="+ 名稱"
                                     class="flex-1 min-w-0 bg-white border border-slate-200 rounded-lg px-3 py-1.5 text-xs font-bold outline-none">
+                                <select v-model="accountForm.currency"
+                                    class="bg-white border border-slate-200 rounded-lg px-2 py-1.5 text-xs font-bold outline-none">
+                                    <option value="TWD">台幣</option>
+                                    <option value="USD">美元</option>
+                                </select>
                                 <select v-model="accountForm.type"
                                     class="bg-white border border-slate-200 rounded-lg px-2 py-1.5 text-xs font-bold outline-none">
                                     <option value="asset">資產</option>
@@ -495,7 +506,7 @@
                     reconcileForm: safeReconcile,
                     bankAccounts: safeBankAccounts,
                     history: JSON.parse(localStorage.getItem('f_history')) || [],
-                    accountForm: { name: '', balance: null, type: 'asset' },
+                    accountForm: { name: '', balance: null, type: 'asset', currency: 'TWD' },
                     currentUser: null,
                     unsubscribeSnapshot: null,
                     isAutoSync: true,
@@ -812,7 +823,7 @@
                 addAccount() {
                     if (!this.accountForm.name) return;
                     this.bankAccounts.push({ ...this.accountForm });
-                    this.accountForm = { name: '', balance: null, type: 'asset' };
+                    this.accountForm = { name: '', balance: null, type: 'asset', currency: 'TWD' };
                     this.saveData();
                 },
                 removeAccount(idx) {
