@@ -273,6 +273,10 @@
                                     <h2 class="text-xl font-900 text-slate-800 tracking-tight">資產負債表</h2>
                                     <p class="text-[10px] font-bold text-slate-500 uppercase tracking-widest mt-1">
                                         Accounts & Liabilities</p>
+                                    <div class="mt-2 flex items-center gap-2">
+                                        <span class="text-xs font-bold text-slate-500">美元匯率:</span>
+                                        <input type="number" v-model.number="usdRate" @change="saveData" class="w-20 edit-input border border-slate-200">
+                                    </div>
                                 </div>
                                 <div class="text-right">
                                     <span
@@ -476,10 +480,12 @@
                 let safeGhToken = '', safeGistId = '', safeApiToken = '';
                 let safeLastView = 'dashboard';
                 let safeBankAccounts = [];
+                let safeUsdRate = 32.0;
 
                 try { safeStocks = JSON.parse(localStorage.getItem('f_data')) || []; } catch (e) { }
                 try { safeLogs = JSON.parse(localStorage.getItem('f_deps')) || []; } catch (e) { }
                 try { safeCash = Number(localStorage.getItem('f_cash')) || 0; } catch (e) { }
+                try { safeUsdRate = Number(localStorage.getItem('f_usd_rate')) || 32.0; } catch (e) { }
                 try { safeReconcile = JSON.parse(localStorage.getItem('f_reconcile')) || { securitiesCost: 0, bankCash: 0 }; } catch (e) { }
                 try { safeGhToken = localStorage.getItem('f_gh_token') || ''; } catch (e) { }
                 try { safeGistId = localStorage.getItem('f_gist_id') || ''; } catch (e) { }
@@ -507,6 +513,7 @@
                     bankAccounts: safeBankAccounts,
                     history: JSON.parse(localStorage.getItem('f_history')) || [],
                     accountForm: { name: '', balance: null, type: 'asset', currency: 'TWD' },
+                    usdRate: safeUsdRate,
                     currentUser: null,
                     unsubscribeSnapshot: null,
                     isAutoSync: true,
@@ -593,15 +600,21 @@
             },
 
             computed: {
-                totalBankAssets() { return this.bankAccounts.filter(a => a.type === 'asset').reduce((sum, a) => sum + (a.balance || 0), 0); },
-                totalLiabilities() { return this.bankAccounts.filter(a => a.type === 'liability').reduce((sum, a) => sum + (a.balance || 0), 0); },
+                getTwdBalance() {
+                    return (acc) => {
+                        const rate = acc.currency === 'USD' ? this.usdRate : 1;
+                        return (acc.balance || 0) * rate;
+                    };
+                },
+                totalBankAssets() { return this.bankAccounts.filter(a => a.type === 'asset').reduce((sum, a) => sum + this.getTwdBalance(a), 0); },
+                totalLiabilities() { return this.bankAccounts.filter(a => a.type === 'liability').reduce((sum, a) => sum + this.getTwdBalance(a), 0); },
                 myNetAssets() { return this.totalBankAssets - this.totalLiabilities; },
                 availableCash() {
                     return this.bankAccounts.reduce((sum, a) => {
                         // 如果沒有 checked 屬性，預設為勾選
                         const isChecked = a.checked !== false;
                         if (isChecked) {
-                            return sum + (a.type === 'asset' ? (a.balance || 0) : -(a.balance || 0));
+                            return sum + (a.type === 'asset' ? this.getTwdBalance(a) : -this.getTwdBalance(a));
                         }
                         return sum;
                     }, 0);
@@ -620,6 +633,7 @@
                     localStorage.setItem('f_indices', JSON.stringify(this.indices));
                     localStorage.setItem('f_banks', JSON.stringify(this.bankAccounts));
                     localStorage.setItem('f_history', JSON.stringify(this.history));
+                    localStorage.setItem('f_usd_rate', this.usdRate);
 
                     // Trigger Auto Sync
                     if (this.isAutoSync && this.githubToken && this.gistId) {
@@ -669,6 +683,7 @@
                         }, { merge: true });
 
                         this.syncStatus = '同步成功';
+                        if (!silent) alert('資料已成功上傳至雲端');
                     } catch (e) {
                         console.error(e);
                         this.syncStatus = '同步失敗';
@@ -697,14 +712,17 @@
                                     this.lastSyncTime = master.assets.updatedAt;
                                     this.saveData();
                                     this.syncStatus = '還原成功';
+                                    if (!silent) alert('雲端資料已成功下載並還原');
                                 }
                             }
                         } else {
                             this.syncStatus = '雲端無資料';
+                            if (!silent) alert('雲端目前沒有備份資料');
                         }
                     } catch (e) {
                         console.error(e);
                         this.syncStatus = '下載失敗';
+                        if (!silent) alert('下載失敗');
                     } finally {
                         this.isSyncing = false;
                         setTimeout(() => this.syncStatus = '', 3000);
@@ -887,17 +905,22 @@
                                 return;
                             }
 
+                            const currency = row[1] && row[1].toString().trim() !== '' ? row[1].toString().trim() : 'TWD';
                             let finalType = currentType;
                             if (name.includes('卡費') || name.includes('負債') || name.includes('貸')) finalType = 'liability';
 
                             let acc = this.bankAccounts.find(a => a.name.trim() === name);
+                            let latestBalance = row[latestColIdx] !== undefined ? (Number(row[latestColIdx]) || 0) : 0;
+                            
                             if (!acc) {
-                                acc = { name: name, balance: 0, type: finalType };
-                                this.bankAccounts.push(acc);
-                            }
-
-                            if (row[latestColIdx] !== undefined) {
-                                acc.balance = Number(row[latestColIdx]) || 0;
+                                // 如果是已經被刪除的銀行（不在目前的 bankAccounts 裡），且最新的餘額是 0，就不要把它加回來
+                                if (latestBalance !== 0) {
+                                    acc = { name: name, balance: latestBalance, type: finalType, currency: currency };
+                                    this.bankAccounts.push(acc);
+                                }
+                            } else {
+                                acc.currency = currency;
+                                acc.balance = latestBalance;
                             }
                         });
 
@@ -910,7 +933,9 @@
                             dates.forEach((date, i) => {
                                 if (values[i] !== undefined) {
                                     let dStr = date;
-                                    if (typeof date === 'number') {
+                                    if (typeof date === 'string') {
+                                        dStr = date.replace(' (最新)', '');
+                                    } else if (typeof date === 'number') {
                                         const d = new Date((date - 25569) * 86400 * 1000);
                                         dStr = d.toISOString().split('T')[0];
                                     }
@@ -953,14 +978,14 @@
                         const currentDetails = {};
                         this.bankAccounts.forEach(acc => currentDetails[acc.name] = acc.balance);
                         exportHistory.push({
-                            date: today + ' (最新)',
+                            date: today,
                             value: this.myNetAssets,
                             details: currentDetails
                         });
                     }
 
                     const historyDates = exportHistory.map(h => h.date);
-                    const header = ['', '', ...historyDates];
+                    const header = ['帳戶名稱', '幣別', ...historyDates];
 
                     // 獲取所有帳戶名稱
                     const allAccountNames = new Set();
@@ -983,7 +1008,9 @@
 
                     // 1. 資產行
                     assetNames.forEach(name => {
-                        const row = [name, ''];
+                        const acc = this.bankAccounts.find(a => a.name.trim() === name);
+                        const currency = acc ? (acc.currency || 'TWD') : 'TWD';
+                        const row = [name, currency];
                         exportHistory.forEach(h => {
                             let val = 0;
                             if (h.details) {
@@ -1000,7 +1027,10 @@
                         if (!h.details) return 0;
                         return assetNames.reduce((sum, n) => {
                             const key = Object.keys(h.details).find(k => k.trim() === n);
-                            return sum + (key ? h.details[key] : 0);
+                            const val = key ? h.details[key] : 0;
+                            const acc = this.bankAccounts.find(a => a.name.trim() === n);
+                            const rate = (acc && acc.currency === 'USD') ? this.usdRate : 1;
+                            return sum + (val * rate);
                         }, 0);
                     })]);
 
@@ -1008,7 +1038,9 @@
 
                     // 2. 負債行
                     liabilityNames.forEach(name => {
-                        const row = [name, ''];
+                        const acc = this.bankAccounts.find(a => a.name.trim() === name);
+                        const currency = acc ? (acc.currency || 'TWD') : 'TWD';
+                        const row = [name, currency];
                         exportHistory.forEach(h => {
                             let val = 0;
                             if (h.details) {
@@ -1058,6 +1090,16 @@
                     const ctx = this.$refs.historyChartRef;
                     if (!ctx) return;
                     if (this.historyChart) this.historyChart.destroy();
+
+                    // 清理可能因之前匯入而殘留的「 (最新)」字眼
+                    let hasDirtyDate = false;
+                    this.history.forEach(h => {
+                        if (typeof h.date === 'string' && h.date.includes(' (最新)')) {
+                            h.date = h.date.replace(' (最新)', '');
+                            hasDirtyDate = true;
+                        }
+                    });
+                    if (hasDirtyDate) this.saveData();
 
                     this.historyChart = new Chart(ctx, {
                         type: 'line',
